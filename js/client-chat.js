@@ -2,6 +2,7 @@
 
 	var ConsoleRoom = this.ConsoleRoom = Room.extend({
 		type: 'chat',
+		order: 0x20,
 		title: '',
 		constructor: function () {
 			if (!this.events) this.events = {};

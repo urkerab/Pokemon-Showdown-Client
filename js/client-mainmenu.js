@@ -2,6 +2,7 @@
 
 	var MainMenuRoom = this.MainMenuRoom = this.Room.extend({
 		type: 'mainmenu',
+		order: 0x00,
 		tinyWidth: 340,
 		bestWidth: 628,
 		events: {

@@ -2,6 +2,7 @@
 
 	var BattleRoom = this.BattleRoom = ConsoleRoom.extend({
 		type: 'battle',
+		order: 0x10,
 		title: '',
 		minWidth: 955,
 		maxWidth: 1180,

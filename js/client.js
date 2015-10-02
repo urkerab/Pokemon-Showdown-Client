@@ -506,7 +506,19 @@
 
 				if (app.curSideRoom && $(e.target).closest(app.curSideRoom.$el).length) {
 					// keypress happened in sideroom
-					if (e.keyCode === 37 && safeLocation || window.nodewebkit && e.ctrlKey && e.shiftKey && e.keyCode === 9) {
+					if (e.shiftKey && e.keyCode === 37 && safeLocation) {
+						// Shift+Left on desktop client
+						if (app.moveRoomBy(app.curSideRoom, -1)) {
+							e.preventDefault();
+							e.stopImmediatePropagation();
+						}
+					} else if (e.shiftKey && e.keyCode === 39 && safeLocation) {
+						// Shift+Right on desktop client
+						if (app.moveRoomBy(app.curSideRoom, 1)) {
+							e.preventDefault();
+							e.stopImmediatePropagation();
+						}
+					} else if (e.keyCode === 37 && safeLocation || window.nodewebkit && e.ctrlKey && e.shiftKey && e.keyCode === 9) {
 						// Left or Ctrl+Shift+Tab on desktop client
 						if (app.topbar.curSideRoomLeft) {
 							e.preventDefault();
@@ -526,7 +538,19 @@
 					return;
 				}
 				// keypress happened outside of sideroom
-				if (e.keyCode === 37 && safeLocation || window.nodewebkit && e.ctrlKey && e.shiftKey && e.keyCode === 9) {
+				if (e.shiftKey && e.keyCode === 37 && app.curRoom) {
+					// Shift+Left on desktop client
+					if (app.moveRoomBy(app.curRoom, -1)) {
+						e.preventDefault();
+						e.stopImmediatePropagation();
+					}
+				} else if (e.shiftKey && e.keyCode === 39 && app.curRoom) {
+					// Shift+Right on desktop client
+					if (app.moveRoomBy(app.curRoom, 1)) {
+						e.preventDefault();
+						e.stopImmediatePropagation();
+					}
+				} else if (e.keyCode === 37 && safeLocation || window.nodewebkit && e.ctrlKey && e.shiftKey && e.keyCode === 9) {
 					// Left or Ctrl+Shift+Tab on desktop client
 					if (app.topbar.curRoomLeft) {
 						e.preventDefault();
@@ -1260,6 +1284,7 @@
 
 		initializeRooms: function () {
 			this.rooms = Object.create(null); // {}
+			this.order = [];
 
 			$(window).on('resize', _.bind(this.resize, this));
 		},
@@ -1331,6 +1356,7 @@
 					var oldRoom = this.rooms[id];
 					oldRoom.destroy();
 					delete this.rooms[id];
+					this.order.splice(this.order.indexOf(id), 1);
 				} else {
 					return this.rooms[id];
 				}
@@ -1387,6 +1413,10 @@
 				if (this.curSideRoom === oldRoom) this.curSideRoom = room;
 				if (this.sideRoom === oldRoom) this.sideRoom = room;
 			}
+			for (var i = 0; i < this.order.length; i++) {
+				if (this.rooms[this.order[i]].order > room.order) break;
+			}
+			this.order.splice(i, 0, id);
 			return room;
 		},
 		focusRoom: function (id) {
@@ -1529,6 +1559,7 @@
 			if (room) {
 				if (room === this.curRoom) this.focusRoom('');
 				delete this.rooms[id];
+				this.order.splice(this.order.indexOf(id), 1);
 				room.destroy(alreadyLeft);
 				if (room === this.sideRoom) {
 					this.sideRoom = null;
@@ -1539,6 +1570,15 @@
 				return true;
 			}
 			return false;
+		},
+		moveRoomBy: function (room, amount) {
+			var old = this.order.indexOf(room.id);
+			var pos = old + amount;
+			if (pos < 0 || pos >= this.order.length) return false;
+			this.order.splice(old, 1);
+			this.order.splice(pos, 0, room.id);
+			this.topbar.updateTabbar();
+			return true;
 		},
 		openInNewWindow: function (url) {
 			if (window.nodewebkit) {
@@ -1563,13 +1603,15 @@
 			if (Config.server.id !== 'showdown') return;
 			var autojoins = [];
 			var autojoinCount = 0;
-			for (var i in this.rooms) {
-				if (!this.rooms[i]) continue;
-				if (this.rooms[i].type !== 'chat' || i === 'lobby') {
+			for (var i = 0; i < this.order.length; i++) {
+				var id = this.order[i];
+				var room = this.rooms[id];
+				if (!room) continue;
+				if (room.type !== 'chat' || id === 'lobby') {
 					continue;
 				}
-				autojoins.push(this.rooms[i].id.indexOf('-') >= 0 ? this.rooms[i].id : (this.rooms[i].title || this.rooms[i].id));
-				if (i === 'staff' || i === 'upperstaff') continue;
+				autojoins.push(id.indexOf('-') >= 0 ? id : (room.title || id));
+				if (id === 'staff' || id === 'upperstaff') continue;
 				autojoinCount++;
 				if (autojoinCount >= 8) break;
 			}
@@ -1764,7 +1806,8 @@
 			var passedCurSideRoom = false;
 
 			var notificationCount = 0;
-			for (var id in app.rooms) {
+			for (var i = 0; i < app.order.length; i++) {
+				var id = app.order[i];
 				if (app.rooms[id].notifications) notificationCount++;
 				if (!id || id === 'teambuilder' || id === 'ladder') continue;
 				var room = app.rooms[id];
@@ -2932,7 +2975,8 @@
 			buf += '</ul>';
 			var atLeastOne = false;
 			var sideBuf = '';
-			for (var id in app.rooms) {
+			for (var i = 0; i < app.order.length; i++) {
+				var id = app.order[i];
 				if (!id || id === 'teambuilder' || id === 'ladder') continue;
 				var room = app.rooms[id];
 				var name = '<i class="fa fa-comment-o"></i> <span>' + id + '</span>';

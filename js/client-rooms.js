@@ -4,6 +4,7 @@
 		minWidth: 320,
 		maxWidth: 1024,
 		type: 'rooms',
+		order: 0x21,
 		title: 'Rooms',
 		isSideRoom: true,
 		events: {
